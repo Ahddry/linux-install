@@ -72,7 +72,7 @@ sudo apt-get update
 print_colored "Installation des paquets requis..." ""
 print_colored "Installation de git, curl, wget, unzip, python3 et python3-pip..." "info"
 
-sudo apt-get install -y git curl wget unzip python3 python3-pip
+sudo apt-get install -y git curl wget unzip python3 python3-pip > /dev/null
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation des paquets requis." "danger"
     exit 1
@@ -82,7 +82,7 @@ fi
 
 # Installation de ZSH
 print_colored "Installation de ZSH..." "info"
-sudo apt-get install -y zsh
+sudo apt-get install -y zsh > /dev/null
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation de ZSH." "danger"
     exit 1
