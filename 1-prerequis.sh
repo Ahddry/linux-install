@@ -141,21 +141,32 @@ fi
 
 # Installation de Homebrew
 print_colored "Installation de Homebrew..." "info"
-# Homebrew ne doit JAMAIS être installé en tant que root
-sudo -u $REAL_USER bash -c "NONINTERACTIVE=1 /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+# Installation dans le répertoire home de l'utilisateur (alternative plus sûre)
+sudo -u $REAL_USER bash -c "cd $REAL_HOME && NONINTERACTIVE=1 /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation de Homebrew." "danger"
     exit 1
 else
     print_colored "Homebrew installé avec succès." "success"
+    # Détection du chemin d'installation de Homebrew
+    if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+        BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
+        BREW_SHELLENV="/home/linuxbrew/.linuxbrew/bin/brew shellenv"
+    elif [ -d "$REAL_HOME/.linuxbrew" ]; then
+        BREW_PATH="$REAL_HOME/.linuxbrew/bin/brew"
+        BREW_SHELLENV="$REAL_HOME/.linuxbrew/bin/brew shellenv"
+    else
+        print_colored "Impossible de trouver l'installation de Homebrew." "danger"
+        exit 1
+    fi
     # Ajout de l'environnement Homebrew au .zshrc de l'utilisateur réel
-    sudo -u $REAL_USER bash -c "echo 'eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\"' >> $REAL_HOME/.zshrc"
+    sudo -u $REAL_USER bash -c "echo 'eval \"\$($BREW_SHELLENV)\"' >> $REAL_HOME/.zshrc"
 fi
 
 # Installation de Gum
 print_colored "Installation de Gum..." "info"
-# Utilisation de l'installation Homebrew de l'utilisateur réel
-sudo -u $REAL_USER /home/linuxbrew/.linuxbrew/bin/brew install gum
+# Utilisation du chemin Homebrew détecté précédemment
+sudo -u $REAL_USER $BREW_PATH install gum
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation de Gum." "danger"
     exit 1
