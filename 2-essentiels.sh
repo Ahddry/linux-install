@@ -6,41 +6,153 @@
 # Utils - Fonctions utilitaires
 # ***************
 
-# Fonction pour afficher un message coloré dans le terminal
-# Utilisation : print_colored "message" "color" | "color" peut être "danger", "success", "debug", "info" ou vide pour aucune couleur
-print_colored() {
-    case "$2" in
-        danger)
-            gum log --time kitchen --structured --level error "DANGER: $1"
+# Fonction pour les messages informatifs avec horodatage
+log_info() {
+    gum log --time kitchen --structured --level info "$1"
+}
+
+# Fonction pour les messages de debug
+log_debug() {
+    gum log --time kitchen --structured --level debug "$1"
+}
+
+# Fonction pour les erreurs
+log_error() {
+    gum log --time kitchen --structured --level error "$1"
+}
+
+# Fonction d'installation avec gestion d'erreur améliorée
+install_with_brew() {
+    local tool_name="$1"
+    local package_name="$2"
+    local extra_args="$3"
+
+    log_info "Installation de $tool_name"
+
+    # Vérification si déjà installé
+    if $BREW_PATH list "$package_name" >/dev/null 2>&1; then
+        log_debug "$tool_name déjà installé"
+        return 0
+    fi
+
+    # Installation avec capture des erreurs
+    local temp_log=$(mktemp)
+    if gum spin --spinner dot --title "Installation de $tool_name..." -- $BREW_PATH install $extra_args "$package_name" 2>"$temp_log"; then
+        log_debug "$tool_name installé avec succès"
+        rm -f "$temp_log"
+        return 0
+    else
+        log_error "Échec de l'installation de $tool_name"
+        if [ -s "$temp_log" ]; then
+            log_error "Détails de l'erreur : $(cat "$temp_log")"
+        fi
+        rm -f "$temp_log"
+        return 1
+    fi
+}
+
+# Fonction d'installation avec tap Homebrew (pour les packages nécessitant un tap spécial)
+install_with_brew_tap() {
+    local tool_name="$1"
+    local tap_name="$2"
+    local package_name="$3"
+    local extra_args="$4"
+
+    log_info "Installation de $tool_name"
+
+    # Vérification si déjà installé
+    if $BREW_PATH list "$package_name" >/dev/null 2>&1; then
+        log_debug "$tool_name déjà installé"
+        return 0
+    fi
+
+    # Ajout du tap si nécessaire
+    local temp_log=$(mktemp)
+    if ! $BREW_PATH tap | grep -q "^$tap_name$"; then
+        log_debug "Ajout du tap $tap_name"
+        if ! gum spin --spinner dot --title "Ajout du tap $tap_name..." -- $BREW_PATH tap "$tap_name" 2>"$temp_log"; then
+            log_error "Échec de l'ajout du tap $tap_name"
+            if [ -s "$temp_log" ]; then
+                log_error "Détails de l'erreur : $(cat "$temp_log")"
+            fi
+            rm -f "$temp_log"
+            return 1
+        fi
+        log_debug "Tap $tap_name ajouté avec succès"
+    fi
+
+    # Installation avec capture des erreurs
+    if gum spin --spinner dot --title "Installation de $tool_name..." -- $BREW_PATH install $extra_args "$package_name" 2>"$temp_log"; then
+        log_debug "$tool_name installé avec succès"
+        rm -f "$temp_log"
+        return 0
+    else
+        log_error "Échec de l'installation de $tool_name"
+        if [ -s "$temp_log" ]; then
+            log_error "Détails de l'erreur : $(cat "$temp_log")"
+        fi
+        rm -f "$temp_log"
+        return 1
+    fi
+}
+
+# Fonction d'installation avec APT
+install_with_apt() {
+    local tool_name="$1"
+    local package_name="$2"
+
+    log_info "Installation de $tool_name"
+
+    local temp_log=$(mktemp)
+    if gum spin --spinner dot --title "Installation de $tool_name..." -- sudo apt-get install -y "$package_name" 2>"$temp_log"; then
+        log_debug "$tool_name installé avec succès"
+        rm -f "$temp_log"
+        return 0
+    else
+        log_error "Échec de l'installation de $tool_name"
+        if [ -s "$temp_log" ]; then
+            log_error "Détails de l'erreur : $(cat "$temp_log")"
+        fi
+        rm -f "$temp_log"
+        return 1
+    fi
+}
+
+# Fonction pour les messages stylés (sans horodatage)
+print_styled() {
+    local color="$2"
+    case "$color" in
+        "green"|"success")
+            gum style --foreground green --bold "$1"
             ;;
-        debug)
-            gum log --time kitchen --structured --level debug "DEBUG: $1"
+        "red"|"danger")
+            gum style --foreground red --bold "$1"
             ;;
-        success)
-            gum style --foreground green --bold "SUCCESS: $1"
+        "blue"|"info")
+            gum style --foreground blue "$1"
             ;;
-        info)
-            gum log --time kitchen --structured --level info "INFO: $1"
+        "yellow"|"warning")
+            gum style --foreground yellow "$1"
             ;;
         *)
-            echo "$1"
+            gum style "$1"
             ;;
     esac
 }
 
 show_help() {
-    print_colored "Argument invalide" "danger"
-    print_colored "Vous pouvez passer l'option --cli pour afficher uniquement les paquets CLI" "info"
+    log_error "Argument invalide"
+    print_styled "Vous pouvez passer l'option --cli pour afficher uniquement les paquets CLI" "info"
     exit 1
 }
 
 invalid_input(){
-    print_colored "Entrée invalide..." "danger"
+    log_error "Entrée invalide..."
 }
 
 # Vérification que gum est installé
 if ! command -v gum &> /dev/null; then
-    print_colored "Gum n'est pas installé. Veuillez d'abord exécuter ./1-prerequis.sh" "danger"
+    echo "Gum n'est pas installé. Veuillez d'abord exécuter ./1-prerequis.sh"
     exit 1
 fi
 
@@ -49,68 +161,76 @@ HAS_GUI=false
 IS_WSL=false
 BREW_PATH=""
 
+# Variables pour stocker les sélections utilisateur
+INSTALL_ZSH_CONFIG=false
+SELECTED_DEV_TOOLS=""
+INSTALL_N=false
+SELECTED_SECURITY_TOOLS=""
+SELECTED_CLOUD_TOOLS=""
+SELECTED_UTILITY_TOOLS=""
+SELECTED_GUI_APPS=""
+SELECTED_SCRIPT_TOOLS=""
+
 # Détection du chemin Homebrew
 if [ -d "/home/linuxbrew/.linuxbrew" ]; then
     BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
 elif [ -d "$HOME/.linuxbrew" ]; then
     BREW_PATH="$HOME/.linuxbrew/bin/brew"
 else
-    print_colored "Homebrew non trouvé. Certaines installations pourraient échouer." "danger"
+    log_error "Homebrew non trouvé. Impossible de continuer."
+    exit 1
 fi
+
+# Vérification que Homebrew fonctionne
+if ! $BREW_PATH --version >/dev/null 2>&1; then
+    log_error "Homebrew non fonctionnel à $BREW_PATH"
+    exit 1
+fi
+
+log_debug "Homebrew détecté à $BREW_PATH"
 
 #****************
 # Configuration initiale et questions préliminaires
 #****************
 
-print_colored "=== Configuration des outils essentiels ===" "info"
+print_styled "=== Configuration des outils essentiels ===" "blue"
 echo
 
 # Question 1 : Interface graphique
 if gum confirm "Votre environnement dispose-t-il d'une interface graphique (bureau, gestionnaire de fenêtres) ?"; then
     HAS_GUI=true
-    print_colored "Interface graphique détectée - les applications graphiques seront proposées" "info"
+    print_styled "Interface graphique détectée - les applications graphiques seront proposées" "green"
 else
     HAS_GUI=false
-    print_colored "Environnement en ligne de commande détecté" "info"
-    
+    print_styled "Environnement en ligne de commande détecté" "blue"
+
     # Question 2 : WSL si pas d'interface graphique
     if gum confirm "Êtes-vous sur Windows Subsystem for Linux (WSL) ?"; then
         IS_WSL=true
-        print_colored "Environnement WSL détecté - certaines options seront adaptées" "info"
+        print_styled "Environnement WSL détecté - certaines options seront adaptées" "yellow"
     fi
 fi
 
+echo
+
+#****************
+# Phase 1 : Collecte des choix utilisateur
+#****************
+
+print_styled "=== PHASE 1 : Sélection des outils à installer ===" "blue"
 echo
 
 #****************
 # 1. Plugins ZSH et configuration .zshrc
 #****************
 
-print_colored "=== 1. Configuration ZSH et plugins ===" "info"
+print_styled "1. Configuration ZSH et plugins" "blue"
 
 if gum confirm "Souhaitez-vous importer la configuration ZSH avec les plugins recommandés ?"; then
-    print_colored "Installation des plugins ZSH..." "info"
-    
-    # Installation des plugins via Homebrew
-    gum spin --spinner dot --title "Installation de zoxide..." -- $BREW_PATH install zoxide
-    gum spin --spinner dot --title "Installation de zsh-autosuggestions..." -- $BREW_PATH install zsh-autosuggestions
-    gum spin --spinner dot --title "Installation de zsh-syntax-highlighting..." -- $BREW_PATH install zsh-syntax-highlighting
-    gum spin --spinner dot --title "Installation de zsh-autocomplete..." -- $BREW_PATH install zsh-autocomplete
-    
-    # Sauvegarde et remplacement du .zshrc
-    if [ -f "$HOME/.zshrc" ]; then
-        cp "$HOME/.zshrc" "$HOME/.zshrc.backup.$(date +%Y%m%d_%H%M%S)"
-        print_colored "Ancienne configuration sauvegardée" "info"
-    fi
-    
-    if [ -f "./zsh/.zshrc" ]; then
-        cp "./zsh/.zshrc" "$HOME/.zshrc"
-        print_colored "Configuration ZSH importée avec succès" "success"
-    else
-        print_colored "Fichier de configuration ./zsh/.zshrc introuvable" "danger"
-    fi
+    INSTALL_ZSH_CONFIG=true
+    print_styled "✓ Configuration ZSH sélectionnée" "green"
 else
-    print_colored "Configuration ZSH ignorée" "info"
+    print_styled "✗ Configuration ZSH ignorée" "yellow"
 fi
 
 echo
@@ -119,10 +239,10 @@ echo
 # 2. Outils de développement
 #****************
 
-print_colored "=== 2. Outils de développement ===" "info"
+print_styled "2. Outils de développement" "blue"
 
 # Préparation de la liste des outils de développement
-DEV_TOOLS=("gcc" "dotnet" "openJDK" "go" "NodeJS" "ruby" "pipx" "sqlite" "mongodb")
+DEV_TOOLS=("gcc" "dotnet" "openJDK" "go" "NodeJS" "ruby" "pipx" "mongodb" "sqlite")
 
 # Ajout conditionnel des outils Docker/Kubernetes
 if [ "$IS_WSL" = false ]; then
@@ -134,47 +254,14 @@ SELECTED_DEV_TOOLS=$(gum choose --no-limit --header "Sélectionnez les outils de
 
 if [ -n "$SELECTED_DEV_TOOLS" ]; then
     # Vérification spéciale pour NodeJS et n
-    INSTALL_N=false
     if echo "$SELECTED_DEV_TOOLS" | grep -q "NodeJS"; then
         if gum confirm "Souhaitez-vous également installer 'n' (gestionnaire de versions Node.js) ?"; then
             INSTALL_N=true
         fi
     fi
-    
-    # Installation de NodeJS en premier si sélectionné
-    if echo "$SELECTED_DEV_TOOLS" | grep -q "NodeJS"; then
-        print_colored "Installation de NodeJS..." "info"
-        gum spin --spinner dot --title "Installation de NodeJS..." -- curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs
-        
-        if [ "$INSTALL_N" = true ]; then
-            gum spin --spinner dot --title "Installation de n..." -- sudo npm install -g n
-        fi
-    fi
-    
-    # Installation des autres outils via Homebrew
-    for tool in $SELECTED_DEV_TOOLS; do
-        case $tool in
-            "NodeJS")
-                # Déjà installé ci-dessus
-                ;;
-            "openJDK")
-                gum spin --spinner dot --title "Installation d'OpenJDK..." -- $BREW_PATH install openjdk
-                ;;
-            "docker-compose")
-                gum spin --spinner dot --title "Installation de docker-compose..." -- $BREW_PATH install docker-compose
-                ;;
-            "Kubernetes")
-                gum spin --spinner dot --title "Installation de kubectl..." -- $BREW_PATH install kubectl
-                ;;
-            *)
-                gum spin --spinner dot --title "Installation de $tool..." -- $BREW_PATH install $tool
-                ;;
-        esac
-    done
-    
-    print_colored "Outils de développement installés" "success"
+    print_styled "✓ Outils de développement sélectionnés : $(echo $SELECTED_DEV_TOOLS | tr '\n' ', ' | sed 's/,$//')" "green"
 else
-    print_colored "Aucun outil de développement sélectionné" "info"
+    print_styled "✗ Aucun outil de développement sélectionné" "yellow"
 fi
 
 echo
@@ -183,35 +270,15 @@ echo
 # 3. Outils de sécurité
 #****************
 
-print_colored "=== 3. Outils de sécurité ===" "info"
+print_styled "3. Outils de sécurité" "blue"
 
 SECURITY_TOOLS=("semgrep" "bearer" "dependency-check" "cdxgen" "depscan" "trivy" "vault")
 SELECTED_SECURITY_TOOLS=$(gum choose --no-limit --header "Sélectionnez les outils de sécurité à installer :" "${SECURITY_TOOLS[@]}")
 
 if [ -n "$SELECTED_SECURITY_TOOLS" ]; then
-    for tool in $SELECTED_SECURITY_TOOLS; do
-        case $tool in
-            "semgrep")
-                gum spin --spinner dot --title "Installation de Semgrep..." -- pip3 install semgrep
-                ;;
-            "dependency-check")
-                gum spin --spinner dot --title "Installation de dependency-check..." -- $BREW_PATH install dependency-check
-                ;;
-            "cdxgen")
-                gum spin --spinner dot --title "Installation de cdxgen..." -- npm install -g @cyclonedx/cdxgen
-                ;;
-            "depscan")
-                gum spin --spinner dot --title "Installation de depscan..." -- pip3 install appthreat-depscan
-                ;;
-            *)
-                gum spin --spinner dot --title "Installation de $tool..." -- $BREW_PATH install $tool
-                ;;
-        esac
-    done
-    
-    print_colored "Outils de sécurité installés" "success"
+    print_styled "✓ Outils de sécurité sélectionnés : $(echo $SELECTED_SECURITY_TOOLS | tr '\n' ', ' | sed 's/,$//')" "green"
 else
-    print_colored "Aucun outil de sécurité sélectionné" "info"
+    print_styled "✗ Aucun outil de sécurité sélectionné" "yellow"
 fi
 
 echo
@@ -220,32 +287,15 @@ echo
 # 4. Outils cloud
 #****************
 
-print_colored "=== 4. Outils cloud ===" "info"
+print_styled "4. Outils cloud" "blue"
 
 CLOUD_TOOLS=("Azure CLI" "AWS CLI" "GCP CLI" "Terraform")
 SELECTED_CLOUD_TOOLS=$(gum choose --no-limit --header "Sélectionnez les outils cloud à installer :" "${CLOUD_TOOLS[@]}")
 
 if [ -n "$SELECTED_CLOUD_TOOLS" ]; then
-    for tool in $SELECTED_CLOUD_TOOLS; do
-        case $tool in
-            "Azure CLI")
-                gum spin --spinner dot --title "Installation d'Azure CLI..." -- curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-                ;;
-            "AWS CLI")
-                gum spin --spinner dot --title "Installation d'AWS CLI..." -- $BREW_PATH install awscli
-                ;;
-            "GCP CLI")
-                gum spin --spinner dot --title "Installation de GCP CLI..." -- $BREW_PATH install google-cloud-sdk
-                ;;
-            "Terraform")
-                gum spin --spinner dot --title "Installation de Terraform..." -- $BREW_PATH install terraform
-                ;;
-        esac
-    done
-    
-    print_colored "Outils cloud installés" "success"
+    print_styled "✓ Outils cloud sélectionnés : $(echo $SELECTED_CLOUD_TOOLS | tr '\n' ', ' | sed 's/,$//')" "green"
 else
-    print_colored "Aucun outil cloud sélectionné" "info"
+    print_styled "✗ Aucun outil cloud sélectionné" "yellow"
 fi
 
 echo
@@ -254,27 +304,15 @@ echo
 # 5. Autres utilitaires
 #****************
 
-print_colored "=== 5. Autres utilitaires ===" "info"
+print_styled "5. Autres utilitaires" "blue"
 
 UTILITY_TOOLS=("fd" "thefuck" "tldr" "wtfis")
 SELECTED_UTILITY_TOOLS=$(gum choose --no-limit --header "Sélectionnez les utilitaires à installer :" "${UTILITY_TOOLS[@]}")
 
 if [ -n "$SELECTED_UTILITY_TOOLS" ]; then
-    for tool in $SELECTED_UTILITY_TOOLS; do
-        gum spin --spinner dot --title "Installation de $tool..." -- $BREW_PATH install $tool
-        
-        # Ajouts spéciaux au .zshrc
-        case $tool in
-            "thefuck")
-                echo 'eval $(thefuck --alias)' >> "$HOME/.zshrc"
-                print_colored "Alias 'fuck' ajouté au .zshrc" "info"
-                ;;
-        esac
-    done
-    
-    print_colored "Utilitaires installés" "success"
+    print_styled "✓ Utilitaires sélectionnés : $(echo $SELECTED_UTILITY_TOOLS | tr '\n' ', ' | sed 's/,$//')" "green"
 else
-    print_colored "Aucun utilitaire sélectionné" "info"
+    print_styled "✗ Aucun utilitaire sélectionné" "yellow"
 fi
 
 echo
@@ -284,34 +322,17 @@ echo
 #****************
 
 if [ "$HAS_GUI" = true ]; then
-    print_colored "=== 6. Applications graphiques ===" "info"
-    
+    print_styled "6. Applications graphiques" "blue"
+
     GUI_APPS=("VSCode" "Spotify" "Firefox" "VLC")
     SELECTED_GUI_APPS=$(gum choose --no-limit --header "Sélectionnez les applications graphiques à installer :" "${GUI_APPS[@]}")
-    
+
     if [ -n "$SELECTED_GUI_APPS" ]; then
-        for app in $SELECTED_GUI_APPS; do
-            case $app in
-                "VSCode")
-                    gum spin --spinner dot --title "Installation de VSCode..." -- $BREW_PATH install --cask visual-studio-code
-                    ;;
-                "Spotify")
-                    gum spin --spinner dot --title "Installation de Spotify..." -- $BREW_PATH install --cask spotify
-                    ;;
-                "Firefox")
-                    gum spin --spinner dot --title "Installation de Firefox..." -- $BREW_PATH install --cask firefox
-                    ;;
-                "VLC")
-                    gum spin --spinner dot --title "Installation de VLC..." -- $BREW_PATH install --cask vlc
-                    ;;
-            esac
-        done
-        
-        print_colored "Applications graphiques installées" "success"
+        print_styled "✓ Applications graphiques sélectionnées : $(echo $SELECTED_GUI_APPS | tr '\n' ', ' | sed 's/,$//')" "green"
     else
-        print_colored "Aucune application graphique sélectionnée" "info"
+        print_styled "✗ Aucune application graphique sélectionnée" "yellow"
     fi
-    
+
     echo
 fi
 
@@ -319,44 +340,394 @@ fi
 # 7. Scripts utilitaires
 #****************
 
-print_colored "=== 7. Scripts utilitaires ===" "info"
+print_styled "7. Scripts utilitaires" "blue"
 
 # TODO: Ajouter d'autres scripts utilitaires selon les besoins futurs
 SCRIPT_TOOLS=("add_dir_to_path")
 SELECTED_SCRIPT_TOOLS=$(gum choose --no-limit --header "Sélectionnez les scripts utilitaires à installer :" "${SCRIPT_TOOLS[@]}")
 
 if [ -n "$SELECTED_SCRIPT_TOOLS" ]; then
-    # Création du répertoire bin utilisateur si nécessaire
-    mkdir -p "$HOME/.local/bin"
-    
-    for script in $SELECTED_SCRIPT_TOOLS; do
-        if [ -f "./2-essentiels/scripts-bash/$script" ]; then
-            cp "./2-essentiels/scripts-bash/$script" "$HOME/.local/bin/"
-            chmod +x "$HOME/.local/bin/$script"
-            print_colored "Script $script installé dans ~/.local/bin" "success"
-        else
-            print_colored "Script $script introuvable dans ./2-essentiels/scripts-bash/" "danger"
-        fi
-    done
-    
-    # Vérification que ~/.local/bin est dans le PATH
-    if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
-        print_colored "~/.local/bin ajouté au PATH dans .zshrc" "info"
-    fi
+    print_styled "✓ Scripts utilitaires sélectionnés : $(echo $SELECTED_SCRIPT_TOOLS | tr '\n' ', ' | sed 's/,$//')" "green"
 else
-    print_colored "Aucun script utilitaire sélectionné" "info"
+    print_styled "✗ Aucun script utilitaire sélectionné" "yellow"
 fi
 
 echo
 
 #****************
+# Phase 2 : Installation des outils sélectionnés
+#****************
+
+print_styled "=== PHASE 2 : Installation des outils sélectionnés ===" "blue"
+print_styled "Les installations vont maintenant commencer. Cela peut prendre du temps..." "yellow"
+echo
+
+#****************
+# Installation 1. Configuration ZSH
+#****************
+
+if [ "$INSTALL_ZSH_CONFIG" = true ]; then
+    log_info "Début de l'installation de la configuration ZSH"
+
+    # Installation des plugins via Homebrew
+    install_with_brew "zoxide" "zoxide"
+    install_with_brew "zsh-autosuggestions" "zsh-autosuggestions"
+    install_with_brew "zsh-syntax-highlighting" "zsh-syntax-highlighting"
+    install_with_brew "zsh-autocomplete" "zsh-autocomplete"
+
+    # Sauvegarde et remplacement du .zshrc
+    if [ -f "$HOME/.zshrc" ]; then
+        cp "$HOME/.zshrc" "$HOME/.zshrc.backup.$(date +%Y%m%d_%H%M%S)"
+        log_debug "Ancienne configuration sauvegardée"
+    fi
+
+    if [ -f "./zsh/.zshrc" ]; then
+        cp "./zsh/.zshrc" "$HOME/.zshrc"
+        log_info "Configuration ZSH importée avec succès"
+    else
+        log_error "Fichier de configuration ./zsh/.zshrc introuvable"
+    fi
+
+    print_styled "✓ Configuration ZSH terminée" "green"
+    echo
+fi
+
+#****************
+# Installation 2. Outils de développement
+#****************
+
+if [ -n "$SELECTED_DEV_TOOLS" ]; then
+    log_info "Début de l'installation des outils de développement"
+
+    # Installation de NodeJS en premier si sélectionné
+    if echo "$SELECTED_DEV_TOOLS" | grep -q "NodeJS"; then
+        log_info "Installation de NodeJS"
+        if gum spin --spinner dot --title "Installation de NodeJS..." -- bash -c "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs" 2>/dev/null; then
+            log_debug "NodeJS installé avec succès"
+
+            if [ "$INSTALL_N" = true ]; then
+                log_info "Installation de n (gestionnaire de versions Node.js)"
+                if gum spin --spinner dot --title "Installation de n..." -- sudo npm install -g n 2>/dev/null; then
+                    log_debug "n installé avec succès"
+                else
+                    log_error "Échec de l'installation de n"
+                fi
+            fi
+        else
+            log_error "Échec de l'installation de NodeJS"
+        fi
+    fi
+
+    # Installation des autres outils via Homebrew ou APT
+    for tool in $SELECTED_DEV_TOOLS; do
+        case $tool in
+            "NodeJS")
+                # Déjà installé ci-dessus
+                ;;
+            "gcc")
+                install_with_apt "GCC" "build-essential"
+                ;;
+            "dotnet")
+                log_info "Installation de .NET"
+                local temp_log=$(mktemp)
+                if gum spin --spinner dot --title "Installation de .NET..." -- bash -c "wget https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0" 2>"$temp_log"; then
+                    log_debug ".NET installé avec succès"
+                    rm -f packages-microsoft-prod.deb
+                else
+                    log_error "Échec de l'installation de .NET"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
+                fi
+                rm -f "$temp_log"
+                ;;
+            "openJDK")
+                install_with_apt "OpenJDK" "openjdk-17-jdk"
+                ;;
+            "go")
+                install_with_brew "Go" "go"
+                ;;
+            "ruby")
+                install_with_brew "Ruby" "ruby"
+                ;;
+            "pipx")
+                log_info "Installation de pipx"
+                local temp_log=$(mktemp)
+                if gum spin --spinner dot --title "Installation de pipx..." -- pip3 install pipx 2>"$temp_log"; then
+                    log_debug "pipx installé avec succès"
+                    # Ajout au PATH
+                    if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.zshrc" 2>/dev/null; then
+                        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+                        log_debug "pipx ajouté au PATH"
+                    fi
+                else
+                    log_error "Échec de l'installation de pipx"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
+                fi
+                rm -f "$temp_log"
+                ;;
+            "docker")
+                log_info "Installation de Docker"
+                local temp_log=$(mktemp)
+                if gum spin --spinner dot --title "Installation de Docker..." -- bash -c "curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh && sudo usermod -aG docker \$USER" 2>"$temp_log"; then
+                    log_debug "Docker installé avec succès"
+                    log_debug "Utilisateur ajouté au groupe docker"
+                    rm -f get-docker.sh
+                else
+                    log_error "Échec de l'installation de Docker"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
+                fi
+                rm -f "$temp_log"
+                ;;
+            "docker-compose")
+                install_with_brew "docker-compose" "docker-compose"
+                ;;
+            "Kubernetes")
+                install_with_brew "kubectl" "kubectl"
+                ;;
+            "mongodb")
+                log_info "Installation de MongoDB"
+                local temp_log=$(mktemp)
+                if gum spin --spinner dot --title "Installation de MongoDB..." -- bash -c "wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add - && echo 'deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list && sudo apt-get update && sudo apt-get install -y mongodb-org" 2>"$temp_log"; then
+                    log_debug "MongoDB installé avec succès"
+                else
+                    log_error "Échec de l'installation de MongoDB"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
+                fi
+                rm -f "$temp_log"
+                ;;
+            "sqlite")
+                install_with_apt "SQLite" "sqlite3 libsqlite3-dev"
+                ;;
+            *)
+                install_with_brew "$tool" "$tool"
+                ;;
+        esac
+    done
+
+    print_styled "✓ Outils de développement installés" "green"
+    echo
+fi
+
+#****************
+# Installation 3. Outils de sécurité
+#****************
+
+if [ -n "$SELECTED_SECURITY_TOOLS" ]; then
+    log_info "Début de l'installation des outils de sécurité"
+
+    for tool in $SELECTED_SECURITY_TOOLS; do
+        case $tool in
+            "semgrep")
+                install_with_brew "Semgrep" "semgrep"
+                ;;
+            "bearer")
+                install_with_brew_tap "Bearer" "bearer/tap" "bearer"
+                ;;
+            "dependency-check")
+                install_with_brew "dependency-check" "dependency-check"
+                ;;
+            "cdxgen")
+                install_with_brew_tap "cdxgen" "cyclonedx/cyclonedx" "cdxgen"
+                ;;
+            "depscan")
+                log_info "Installation de depscan"
+                local temp_log=$(mktemp)
+                if gum spin --spinner dot --title "Installation de depscan..." -- pip3 install appthreat-depscan 2>"$temp_log"; then
+                    log_debug "depscan installé avec succès"
+                else
+                    log_error "Échec de l'installation de depscan"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
+                fi
+                rm -f "$temp_log"
+                ;;
+            "trivy")
+                install_with_brew "Trivy" "trivy"
+                ;;
+            "vault")
+                install_with_brew "Vault" "vault"
+                ;;
+            *)
+                install_with_brew "$tool" "$tool"
+                ;;
+        esac
+    done
+
+    print_styled "✓ Outils de sécurité installés" "green"
+    echo
+fi
+
+#****************
+# Installation 4. Outils cloud
+#****************
+
+if [ -n "$SELECTED_CLOUD_TOOLS" ]; then
+    log_info "Début de l'installation des outils cloud"
+
+    for tool in $SELECTED_CLOUD_TOOLS; do
+        case $tool in
+            "Azure CLI")
+                log_info "Installation d'Azure CLI"
+                if gum spin --spinner dot --title "Installation d'Azure CLI..." -- bash -c "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash" 2>/dev/null; then
+                    log_debug "Azure CLI installé avec succès"
+                else
+                    log_error "Échec de l'installation d'Azure CLI"
+                fi
+                ;;
+            "AWS CLI")
+                log_info "Installation d'AWS CLI"
+                if gum spin --spinner dot --title "Installation d'AWS CLI..." -- $BREW_PATH install awscli 2>/dev/null; then
+                    log_debug "AWS CLI installé avec succès"
+                else
+                    log_error "Échec de l'installation d'AWS CLI"
+                fi
+                ;;
+            "GCP CLI")
+                log_info "Installation de GCP CLI"
+                if gum spin --spinner dot --title "Installation de GCP CLI..." -- $BREW_PATH install google-cloud-sdk 2>/dev/null; then
+                    log_debug "GCP CLI installé avec succès"
+                else
+                    log_error "Échec de l'installation de GCP CLI"
+                fi
+                ;;
+            "Terraform")
+                log_info "Installation de Terraform"
+                if gum spin --spinner dot --title "Installation de Terraform..." -- $BREW_PATH install terraform 2>/dev/null; then
+                    log_debug "Terraform installé avec succès"
+                else
+                    log_error "Échec de l'installation de Terraform"
+                fi
+                ;;
+        esac
+    done
+
+    print_styled "✓ Outils cloud installés" "green"
+    echo
+fi
+
+#****************
+# Installation 5. Autres utilitaires
+#****************
+
+if [ -n "$SELECTED_UTILITY_TOOLS" ]; then
+    log_info "Début de l'installation des utilitaires"
+
+    for tool in $SELECTED_UTILITY_TOOLS; do
+        log_info "Installation de $tool"
+        if gum spin --spinner dot --title "Installation de $tool..." -- $BREW_PATH install $tool 2>/dev/null; then
+            log_debug "$tool installé avec succès"
+
+            # Ajouts spéciaux au .zshrc
+            case $tool in
+                "thefuck")
+                    echo 'eval $(thefuck --alias)' >> "$HOME/.zshrc"
+                    log_debug "Alias 'fuck' ajouté au .zshrc"
+                    ;;
+            esac
+        else
+            log_error "Échec de l'installation de $tool"
+        fi
+    done
+
+    print_styled "✓ Utilitaires installés" "green"
+    echo
+fi
+
+#****************
+# Installation 6. Applications graphiques
+#****************
+
+if [ "$HAS_GUI" = true ] && [ -n "$SELECTED_GUI_APPS" ]; then
+    log_info "Début de l'installation des applications graphiques"
+
+    for app in $SELECTED_GUI_APPS; do
+        case $app in
+            "VSCode")
+                log_info "Installation de VSCode"
+                if gum spin --spinner dot --title "Installation de VSCode..." -- $BREW_PATH install --cask visual-studio-code 2>/dev/null; then
+                    log_debug "VSCode installé avec succès"
+                else
+                    log_error "Échec de l'installation de VSCode"
+                fi
+                ;;
+            "Spotify")
+                log_info "Installation de Spotify"
+                if gum spin --spinner dot --title "Installation de Spotify..." -- $BREW_PATH install --cask spotify 2>/dev/null; then
+                    log_debug "Spotify installé avec succès"
+                else
+                    log_error "Échec de l'installation de Spotify"
+                fi
+                ;;
+            "Firefox")
+                log_info "Installation de Firefox"
+                if gum spin --spinner dot --title "Installation de Firefox..." -- $BREW_PATH install --cask firefox 2>/dev/null; then
+                    log_debug "Firefox installé avec succès"
+                else
+                    log_error "Échec de l'installation de Firefox"
+                fi
+                ;;
+            "VLC")
+                log_info "Installation de VLC"
+                if gum spin --spinner dot --title "Installation de VLC..." -- $BREW_PATH install --cask vlc 2>/dev/null; then
+                    log_debug "VLC installé avec succès"
+                else
+                    log_error "Échec de l'installation de VLC"
+                fi
+                ;;
+        esac
+    done
+
+    print_styled "✓ Applications graphiques installées" "green"
+    echo
+fi
+
+#****************
+# Installation 7. Scripts utilitaires
+#****************
+
+if [ -n "$SELECTED_SCRIPT_TOOLS" ]; then
+    log_info "Début de l'installation des scripts utilitaires"
+
+    # Création du répertoire bin utilisateur si nécessaire
+    mkdir -p "$HOME/.local/bin"
+    log_debug "Répertoire ~/.local/bin créé"
+
+    for script in $SELECTED_SCRIPT_TOOLS; do
+        if [ -f "./2-essentiels/scripts-bash/$script" ]; then
+            cp "./2-essentiels/scripts-bash/$script" "$HOME/.local/bin/"
+            chmod +x "$HOME/.local/bin/$script"
+            log_info "Script $script installé dans ~/.local/bin"
+            log_debug "Permissions d'exécution accordées à $script"
+        else
+            log_error "Script $script introuvable dans ./2-essentiels/scripts-bash/"
+        fi
+    done
+
+    # Vérification que ~/.local/bin est dans le PATH
+    if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+        log_debug "~/.local/bin ajouté au PATH dans .zshrc"
+    fi
+
+    print_styled "✓ Scripts utilitaires installés" "green"
+    echo
+fi
+
+#****************
 # Finalisation
 #****************
 
-print_colored "=== Installation terminée ===" "success"
-print_colored "Tous les outils sélectionnés ont été installés !" "success"
-print_colored "Redémarrez votre terminal ou exécutez 'source ~/.zshrc' pour appliquer tous les changements." "info"
+print_styled "=== Installation terminée ===" "green"
+print_styled "Tous les outils sélectionnés ont été installés !" "green"
+print_styled "Redémarrez votre terminal ou exécutez 'source ~/.zshrc' pour appliquer tous les changements." "blue"
 
 # Fin du script d'installation des outils essentiels
 #****************
