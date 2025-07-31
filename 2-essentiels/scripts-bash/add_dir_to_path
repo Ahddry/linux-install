@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Script utilitaire pour ajouter un répertoire au PATH
+# Usage: add_dir_to_path /chemin/vers/repertoire
+
+if [ $# -eq 0 ]; then
+    echo "Usage: add_dir_to_path <répertoire>"
+    echo "Ajoute un répertoire au PATH dans votre .zshrc"
+    exit 1
+fi
+
+DIRECTORY="$1"
+
+# Vérification que le répertoire existe
+if [ ! -d "$DIRECTORY" ]; then
+    echo "Erreur: Le répertoire '$DIRECTORY' n'existe pas."
+    exit 1
+fi
+
+# Conversion en chemin absolu
+DIRECTORY=$(realpath "$DIRECTORY")
+
+# Vérification que le répertoire n'est pas déjà dans le PATH
+if echo "$PATH" | grep -q "$DIRECTORY"; then
+    echo "Le répertoire '$DIRECTORY' est déjà dans le PATH."
+    exit 0
+fi
+
+# Ajout au .zshrc
+echo "export PATH=\"$DIRECTORY:\$PATH\"" >> "$HOME/.zshrc"
+echo "Répertoire '$DIRECTORY' ajouté au PATH dans ~/.zshrc"
+echo "Exécutez 'source ~/.zshrc' ou redémarrez votre terminal pour appliquer les changements."
