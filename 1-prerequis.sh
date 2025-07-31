@@ -40,6 +40,10 @@ invalid_input(){
 }
 
 APT_GET_DIR=$(which apt-get)
+# Obtenir le nom de l'utilisateur réel (même si le script est exécuté avec sudo)
+REAL_USER=${SUDO_USER:-$(whoami)}
+REAL_HOME=$(eval echo ~$REAL_USER)
+
 sudo true
 
 #****************
@@ -90,9 +94,15 @@ else
     print_colored "ZSH installé avec succès." "success"
 fi
 
+#****************
+# À partir d'ici, toutes les commandes doivent être exécutées SANS sudo
+# pour que les configurations s'appliquent à l'utilisateur courant et non à root
+#****************
+
 # Configuration de ZSH comme shell par défaut
 print_colored "Configuration de ZSH comme shell par défaut..." "info"
-chsh -s $(which zsh)
+# Utilisation de sudo -u pour exécuter la commande en tant qu'utilisateur réel
+sudo -u $REAL_USER chsh -s $(which zsh)
 if [ $? -ne 0 ]; then
     print_colored "Échec de la configuration de ZSH comme shell par défaut." "danger"
     exit 1
@@ -102,24 +112,26 @@ fi
 
 # Installation d'Oh My Posh
 print_colored "Installation d'Oh My Posh..." "info"
-curl -s https://ohmyposh.dev/install.sh | bash -s
+# Exécution en tant qu'utilisateur réel pour installer dans son répertoire home
+sudo -u $REAL_USER bash -c "curl -s https://ohmyposh.dev/install.sh | bash -s"
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation d'Oh My Posh." "danger"
     exit 1
 else
     print_colored "Oh My Posh installé avec succès." "success"
-    echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.zshrc
-    echo "eval \"\$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)\"" >> ~/.zshrc
+    # Modification du .zshrc de l'utilisateur réel
+    sudo -u $REAL_USER bash -c "echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> $REAL_HOME/.zshrc"
+    sudo -u $REAL_USER bash -c "echo 'eval \"\$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)\"' >> $REAL_HOME/.zshrc"
 fi
 
 # Copie du thème personnalisé pour Oh My Posh
 print_colored "Copie du thème personnalisé pour Oh My Posh..." "info"
-cp ./zsh/.montheme.omp.json ~/.montheme.omp.json
+sudo -u $REAL_USER cp ./zsh/.montheme.omp.json $REAL_HOME/.montheme.omp.json
 if [ $? -ne 0 ]; then
     print_colored "Échec de la copie du thème personnalisé." "danger"
     exit 1
 else
-    if [ -f ~/.montheme.omp.json ]; then
+    if [ -f $REAL_HOME/.montheme.omp.json ]; then
         print_colored "Thème personnalisé copié avec succès." "success"
     else
         print_colored "Échec de la copie du thème personnalisé." "danger"
@@ -129,18 +141,21 @@ fi
 
 # Installation de Homebrew
 print_colored "Installation de Homebrew..." "info"
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Homebrew ne doit JAMAIS être installé en tant que root
+sudo -u $REAL_USER bash -c "NONINTERACTIVE=1 /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation de Homebrew." "danger"
     exit 1
 else
     print_colored "Homebrew installé avec succès." "success"
-    echo "eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\"" >> ~/.zshrc
+    # Ajout de l'environnement Homebrew au .zshrc de l'utilisateur réel
+    sudo -u $REAL_USER bash -c "echo 'eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\"' >> $REAL_HOME/.zshrc"
 fi
 
 # Installation de Gum
 print_colored "Installation de Gum..." "info"
-brew install gum
+# Utilisation de l'installation Homebrew de l'utilisateur réel
+sudo -u $REAL_USER /home/linuxbrew/.linuxbrew/bin/brew install gum
 if [ $? -ne 0 ]; then
     print_colored "Échec de l'installation de Gum." "danger"
     exit 1
@@ -149,8 +164,8 @@ else
 fi
 
 print_colored "Installation des prérequis terminée." "success"
-print_colored "Veuillez redémarrer votre terminal ou exécuter 'source ~/.zshrc' pour appliquer les changements."
-print_colored "Vous pourrez ensuite exécuter le script d'installation des modules et outils essentiels."
+print_colored "Veuillez redémarrer votre terminal ou exécuter 'source $REAL_HOME/.zshrc' pour appliquer les changements." "info"
+print_colored "Vous pourrez ensuite exécuter le script d'installation des modules et outils essentiels." "info"
 
 # Fin du script d'installation des prérequis
 #****************
