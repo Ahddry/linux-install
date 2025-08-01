@@ -239,7 +239,7 @@
           "background": "#FFCA5D",
           "foreground": "#111111",
           "properties": {
-            "style": "roundrock",
+            "style": "round",
             "threshold": 0
           },
           "style": "diamond",
@@ -254,7 +254,7 @@
           "invert_powerline": true,
           "leading_diamond": "\ue0b2",
           "properties": {
-            "time_format": "_2,15:04"
+            "time_format": "15:04:05"
           },
           "style": "diamond",
           "template": " {{ .CurrentDate | date .Format }} \uf017 ",
