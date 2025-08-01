@@ -1,0 +1,35 @@
+: 1712564358:0;git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k
+: 1712564381:0;nano ./.zshrc
+: 1712566281:0;curl -L https://bit.ly/ubuntu-essentials > essentials.sh
+: 1712566284:0;bash essentials.sh
+: 1712566295:0;bash essentials.sh --cli
+: 1712566435:0;sudo npm i -g n
+: 1712566441:0;sudo n latest
+: 1712566455:0;node -v
+: 1712567012:0;/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+: 1712567062:0;(echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/adri/.zshrc
+: 1712567068:0;eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+: 1712567081:0;sudo apt-get install build-essential
+: 1712567090:0;brew install gcc
+: 1712567410:0;brew install semgrep
+: 1712567655:0;semgrep show --help
+: 1712568103:0;brew install tldr
+: 1712568146:0;brew install jq
+: 1712568381:0;tldr
+: 1712568392:0;tldr semgrep
+: 1712568402:0;tldr jq
+: 1712568461:0;cd /mnt/c/Users/a.blair/Downloads
+: 1712568660:0;sudo npm install -g npm@10.5.1
+: 1712572757:0;sudo apt install tree
+: 1712575879:0;nano ./.zsh_history
+: 1712585257:0;sudo brew install fd
+: 1712585265:0;brew
+: 1712585271:0;brew install fd
+: 1712585293:0;tldr fd
+: 1712586562:0;brew install thefuck
+: 1712586616:0;eval $(thefuck --alias)
+: 1712586622:0;tldr eval
+: 1712586745:0;brew install zoxide
+: 1712586799:0;zoxide
+: 1712743027:0;tldr zoxide
+: 1712743069:0;tldr ZSH-AUTOSUGGEST
