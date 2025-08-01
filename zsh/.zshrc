@@ -3,6 +3,12 @@
 # Path configuration
 export PATH="$HOME/.local/bin:$PATH"
 
+# Homebrew configuration
+if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+elif [ -d "$HOME/.linuxbrew" ]; then
+    eval "$($HOME/.linuxbrew/bin/brew shellenv)"
+fi
 
 # Zoxide configuration (smart cd replacement)
 if command -v zoxide &> /dev/null; then
@@ -116,12 +122,6 @@ zstyle ':completion:*' list-colors ''
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 
 
-# Homebrew configuration
-if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [ -d "$HOME/.linuxbrew" ]; then
-    eval "$($HOME/.linuxbrew/bin/brew shellenv)"
-fi
 
 # Oh My Posh configuration
 if command -v oh-my-posh &> /dev/null; then
