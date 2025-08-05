@@ -37,7 +37,8 @@ install_with_brew() {
 
     # Installation avec capture des erreurs
     local temp_log=$(mktemp)
-    if gum spin --spinner dot --title "Installation de $tool_name..." -- $BREW_PATH install $extra_args "$package_name" 2>"$temp_log"; then
+    log_debug "Commande : $BREW_PATH install $extra_args $package_name"
+    if $BREW_PATH install $extra_args "$package_name" 2>"$temp_log"; then
         log_debug "$tool_name installé avec succès"
         rm -f "$temp_log"
         return 0
@@ -70,7 +71,7 @@ install_with_brew_tap() {
     local temp_log=$(mktemp)
     if ! $BREW_PATH tap | grep -q "^$tap_name$"; then
         log_debug "Ajout du tap $tap_name"
-        if ! gum spin --spinner dot --title "Ajout du tap $tap_name..." -- $BREW_PATH tap "$tap_name" 2>"$temp_log"; then
+        if ! $BREW_PATH tap "$tap_name" 2>"$temp_log"; then
             log_error "Échec de l'ajout du tap $tap_name"
             if [ -s "$temp_log" ]; then
                 log_error "Détails de l'erreur : $(cat "$temp_log")"
@@ -82,7 +83,8 @@ install_with_brew_tap() {
     fi
 
     # Installation avec capture des erreurs
-    if gum spin --spinner dot --title "Installation de $tool_name..." -- $BREW_PATH install $extra_args "$package_name" 2>"$temp_log"; then
+    log_debug "Commande : $BREW_PATH install $extra_args $package_name"
+    if $BREW_PATH install $extra_args "$package_name" 2>"$temp_log"; then
         log_debug "$tool_name installé avec succès"
         rm -f "$temp_log"
         return 0
@@ -104,7 +106,7 @@ install_with_apt() {
     log_info "Installation de $tool_name"
 
     local temp_log=$(mktemp)
-    if gum spin --spinner dot --title "Installation de $tool_name..." -- sudo apt-get install -y "$package_name" 2>"$temp_log"; then
+    if sudo apt-get install -y "$package_name" 2>"$temp_log"; then
         log_debug "$tool_name installé avec succès"
         rm -f "$temp_log"
         return 0
@@ -116,9 +118,7 @@ install_with_apt() {
         rm -f "$temp_log"
         return 1
     fi
-}
-
-# Fonction pour les messages stylés (sans horodatage)
+}# Fonction pour les messages stylés (sans horodatage)
 print_styled() {
     local color="$2"
     case "$color" in
@@ -471,12 +471,24 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
             "docker")
                 log_info "Installation de Docker"
                 local temp_log=$(mktemp)
-                if gum spin --spinner dot --title "Installation de Docker..." -- bash -c "curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh && sudo usermod -aG docker \$USER" 2>"$temp_log"; then
-                    log_debug "Docker installé avec succès"
-                    log_debug "Utilisateur ajouté au groupe docker"
-                    rm -f get-docker.sh
+                log_debug "Téléchargement du script d'installation Docker..."
+                if curl -fsSL https://get.docker.com -o get-docker.sh 2>"$temp_log"; then
+                    log_debug "Exécution du script d'installation Docker..."
+                    if sudo sh get-docker.sh >>"$temp_log" 2>&1; then
+                        log_debug "Ajout de l'utilisateur au groupe docker..."
+                        sudo usermod -aG docker "$USER"
+                        log_debug "Docker installé avec succès"
+                        log_debug "Utilisateur ajouté au groupe docker"
+                        rm -f get-docker.sh
+                    else
+                        log_error "Échec de l'installation de Docker"
+                        if [ -s "$temp_log" ]; then
+                            log_error "Détails de l'erreur : $(cat "$temp_log")"
+                        fi
+                        rm -f get-docker.sh
+                    fi
                 else
-                    log_error "Échec de l'installation de Docker"
+                    log_error "Échec du téléchargement du script Docker"
                     if [ -s "$temp_log" ]; then
                         log_error "Détails de l'erreur : $(cat "$temp_log")"
                     fi
@@ -584,27 +596,42 @@ if [ -n "$SELECTED_CLOUD_TOOLS" ]; then
                 ;;
             "AWS CLI")
                 log_info "Installation d'AWS CLI"
-                if gum spin --spinner dot --title "Installation d'AWS CLI..." -- $BREW_PATH install awscli 2>/dev/null; then
-                    log_debug "AWS CLI installé avec succès"
+                local temp_log=$(mktemp)
+                log_debug "Téléchargement d'AWS CLI..."
+                if curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" 2>"$temp_log"; then
+                    log_debug "Extraction d'AWS CLI..."
+                    if unzip -q awscliv2.zip 2>>"$temp_log"; then
+                        log_debug "Installation d'AWS CLI..."
+                        if sudo ./aws/install 2>>"$temp_log"; then
+                            log_debug "AWS CLI installé avec succès"
+                            rm -rf aws awscliv2.zip
+                        else
+                            log_error "Échec de l'installation d'AWS CLI"
+                            if [ -s "$temp_log" ]; then
+                                log_error "Détails de l'erreur : $(cat "$temp_log")"
+                            fi
+                            rm -rf aws awscliv2.zip
+                        fi
+                    else
+                        log_error "Échec de l'extraction d'AWS CLI"
+                        if [ -s "$temp_log" ]; then
+                            log_error "Détails de l'erreur : $(cat "$temp_log")"
+                        fi
+                        rm -f awscliv2.zip
+                    fi
                 else
-                    log_error "Échec de l'installation d'AWS CLI"
+                    log_error "Échec du téléchargement d'AWS CLI"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
                 fi
+                rm -f "$temp_log"
                 ;;
             "GCP CLI")
-                log_info "Installation de GCP CLI"
-                if gum spin --spinner dot --title "Installation de GCP CLI..." -- $BREW_PATH install google-cloud-sdk 2>/dev/null; then
-                    log_debug "GCP CLI installé avec succès"
-                else
-                    log_error "Échec de l'installation de GCP CLI"
-                fi
+                install_with_brew "GCP CLI" "google-cloud-sdk"
                 ;;
             "Terraform")
-                log_info "Installation de Terraform"
-                if gum spin --spinner dot --title "Installation de Terraform..." -- $BREW_PATH install terraform 2>/dev/null; then
-                    log_debug "Terraform installé avec succès"
-                else
-                    log_error "Échec de l'installation de Terraform"
-                fi
+                install_with_brew "Terraform" "terraform"
                 ;;
         esac
     done
@@ -621,19 +648,16 @@ if [ -n "$SELECTED_UTILITY_TOOLS" ]; then
     log_info "Début de l'installation des utilitaires"
 
     for tool in $SELECTED_UTILITY_TOOLS; do
-        log_info "Installation de $tool"
-        if gum spin --spinner dot --title "Installation de $tool..." -- $BREW_PATH install $tool 2>/dev/null; then
-            log_debug "$tool installé avec succès"
-
+        if install_with_brew "$tool" "$tool"; then
             # Ajouts spéciaux au .zshrc
             case $tool in
                 "thefuck")
-                    echo 'eval $(thefuck --alias)' >> "$HOME/.zshrc"
-                    log_debug "Alias 'fuck' ajouté au .zshrc"
+                    if ! grep -q 'eval $(thefuck --alias)' "$HOME/.zshrc" 2>/dev/null; then
+                        echo 'eval $(thefuck --alias)' >> "$HOME/.zshrc"
+                        log_debug "Alias 'fuck' ajouté au .zshrc"
+                    fi
                     ;;
             esac
-        else
-            log_error "Échec de l'installation de $tool"
         fi
     done
 
