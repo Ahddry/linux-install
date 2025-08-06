@@ -88,41 +88,62 @@ fi
 
 # Installation de Homebrew
 print_colored "Installation de Homebrew..." "info"
-NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-if [ $? -ne 0 ]; then
-    print_colored "Échec de l'installation de Homebrew." "danger"
-    exit 1
-else
-    print_colored "Homebrew installé avec succès." "success"
-
-    # Détection du chemin d'installation de Homebrew
-    if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-        BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
-        echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
-    elif [ -d "$HOME/.linuxbrew" ]; then
-        BREW_PATH="$HOME/.linuxbrew/bin/brew"
-        echo 'eval "$($HOME/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+if ! command -v brew &> /dev/null; then
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    if [ $? -ne 0 ]; then
+        print_colored "Échec de l'installation de Homebrew." "danger"
+        exit 1
     else
-        print_colored "Installation alternative de Homebrew..." "info"
-        # Installation manuelle si l'installation standard échoue
-        git clone https://github.com/Homebrew/brew.git ~/.linuxbrew/Homebrew
-        mkdir -p ~/.linuxbrew/bin
-        ln -s ../Homebrew/bin/brew ~/.linuxbrew/bin/brew
-        ~/.linuxbrew/bin/brew update --force --quiet
-        BREW_PATH="$HOME/.linuxbrew/bin/brew"
-        echo 'eval "$($HOME/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+        print_colored "Homebrew installé avec succès." "success"
+
+        # Détection du chemin d'installation de Homebrew
+        if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+            BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
+            echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+        elif [ -d "$HOME/.linuxbrew" ]; then
+            BREW_PATH="$HOME/.linuxbrew/bin/brew"
+            echo 'eval "$($HOME/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+        else
+            print_colored "Installation alternative de Homebrew..." "info"
+            # Installation manuelle si l'installation standard échoue
+            git clone https://github.com/Homebrew/brew.git ~/.linuxbrew/Homebrew
+            mkdir -p ~/.linuxbrew/bin
+            ln -s ../Homebrew/bin/brew ~/.linuxbrew/bin/brew
+            ~/.linuxbrew/bin/brew update --force --quiet
+            BREW_PATH="$HOME/.linuxbrew/bin/brew"
+            echo 'eval "$($HOME/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+        fi
     fi
+else
+    print_colored "Homebrew est déjà installé." "debug"
 fi
+
 
 # Installation de Gum
 print_colored "Installation de Gum..." "info"
-if [ -f "$BREW_PATH" ]; then
-    $BREW_PATH install gum
-    if [ $? -eq 0 ]; then
-        print_colored "Gum installé avec succès via Homebrew." "success"
+if command -v gum &> /dev/null; then
+    print_colored "Gum est déjà installé." "debug"
+    exit 0
+else
+    if [ -f "$BREW_PATH" ]; then
+        $BREW_PATH install gum
+        if [ $? -eq 0 ]; then
+            print_colored "Gum installé avec succès via Homebrew." "success"
+        else
+            print_colored "Échec de l'installation de Gum via Homebrew, tentative alternative..." "info"
+            # Installation alternative depuis GitHub
+            cd /tmp
+            curl -s https://api.github.com/repos/charmbracelet/gum/releases/latest | grep 'browser_download_url.*linux_amd64.tar.gz' | cut -d : -f 2,3 | tr -d '"' | wget -qi -
+            tar -xzf gum_*_linux_amd64.tar.gz
+            mkdir -p ~/.local/bin
+            cp gum_*_linux_amd64/gum ~/.local/bin/
+            rm -rf gum_*_linux_amd64*
+            cd - > /dev/null
+            print_colored "Gum installé avec succès via GitHub." "success"
+        fi
     else
-        print_colored "Échec de l'installation de Gum via Homebrew, tentative alternative..." "info"
-        # Installation alternative depuis GitHub
+        print_colored "Homebrew non trouvé, installation de Gum via GitHub..." "info"
+        # Installation directe depuis GitHub
         cd /tmp
         curl -s https://api.github.com/repos/charmbracelet/gum/releases/latest | grep 'browser_download_url.*linux_amd64.tar.gz' | cut -d : -f 2,3 | tr -d '"' | wget -qi -
         tar -xzf gum_*_linux_amd64.tar.gz
@@ -132,17 +153,6 @@ if [ -f "$BREW_PATH" ]; then
         cd - > /dev/null
         print_colored "Gum installé avec succès via GitHub." "success"
     fi
-else
-    print_colored "Homebrew non trouvé, installation de Gum via GitHub..." "info"
-    # Installation directe depuis GitHub
-    cd /tmp
-    curl -s https://api.github.com/repos/charmbracelet/gum/releases/latest | grep 'browser_download_url.*linux_amd64.tar.gz' | cut -d : -f 2,3 | tr -d '"' | wget -qi -
-    tar -xzf gum_*_linux_amd64.tar.gz
-    mkdir -p ~/.local/bin
-    cp gum_*_linux_amd64/gum ~/.local/bin/
-    rm -rf gum_*_linux_amd64*
-    cd - > /dev/null
-    print_colored "Gum installé avec succès via GitHub." "success"
 fi
 
 print_colored "Installation des prérequis utilisateur terminée." "success"
