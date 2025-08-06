@@ -164,7 +164,7 @@ BREW_PATH=""
 
 # Variables pour stocker les sélections utilisateur
 INSTALL_ZSH_CONFIG=false
-INSTALL_ZSH-AUTOCOMPLETE=false
+INSTALL_ZSH_AUTOCOMPLETE=false
 SELECTED_DEV_TOOLS=""
 INSTALL_N=false
 SELECTED_SECURITY_TOOLS=""
@@ -232,7 +232,7 @@ if gum confirm "Souhaitez-vous importer la configuration ZSH avec les plugins re
     INSTALL_ZSH_CONFIG=true
     print_styled "✓ Configuration ZSH sélectionnée" "green"
     if gum confirm "Souhaitez-vous également installer zsh-autocomplete ?"; then
-        INSTALL_ZSH-AUTOCOMPLETE=true
+        INSTALL_ZSH_AUTOCOMPLETE=true
     fi
 else
     print_styled "✗ Configuration ZSH ignorée" "yellow"
@@ -378,7 +378,7 @@ if [ "$INSTALL_ZSH_CONFIG" = true ]; then
     install_with_brew "zoxide" "zoxide"
     install_with_brew "zsh-autosuggestions" "zsh-autosuggestions"
     install_with_brew "zsh-syntax-highlighting" "zsh-syntax-highlighting"
-    if [ "$INSTALL_ZSH-AUTOCOMPLETE" = true ]; then
+    if [ "$INSTALL_ZSH_AUTOCOMPLETE" = true ]; then
         install_with_brew "zsh-autocomplete" "zsh-autocomplete"
     fi
 
