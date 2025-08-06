@@ -113,16 +113,30 @@ plugins=(
 
 # Homebrew configuration
 # eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-if type brew &>/dev/null; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
-    autoload -Uz compinit
-    compinit
-fi
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+autoload -Uz compinit
+compinit
 
 # Zoxide configuration (smart cd replacement)
 if command -v zoxide &> /dev/null; then
     eval "$(zoxide init zsh)"
+fi
+
+# ZSH plugins configuration
+# Auto-suggestions
+if [ -f "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
+    source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+
+# Syntax highlighting
+if [ -f "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
+    source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+
+# Auto-complete
+if [ -f "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]; then
+    source "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 fi
 
 # A garder à la fin : oh-my-posh
