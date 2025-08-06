@@ -437,7 +437,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
                 ;;
             "dotnet")
                 log_info "Installation de .NET"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 if gum spin --spinner dot --title "Installation de .NET..." -- bash -c "wget https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0" 2>"$temp_log"; then
                     log_debug ".NET installé avec succès"
                     rm -f packages-microsoft-prod.deb
@@ -460,7 +460,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
                 ;;
             "pipx")
                 log_info "Installation de pipx"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 if gum spin --spinner dot --title "Installation de pipx..." -- pip3 install pipx 2>"$temp_log"; then
                     log_debug "pipx installé avec succès"
                     # Ajout au PATH
@@ -478,7 +478,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
                 ;;
             "docker")
                 log_info "Installation de Docker"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 log_debug "Téléchargement du script d'installation Docker..."
                 if curl -fsSL https://get.docker.com -o get-docker.sh 2>"$temp_log"; then
                     log_debug "Exécution du script d'installation Docker..."
@@ -505,9 +505,9 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
                 ;;
             "docker-compose")
                 log_info "Installation de Docker Compose"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 log_debug "Téléchargement de Docker Compose..."
-                local COMPOSE_VERSION=$(git ls-remote https://github.com/docker/compose | grep refs/tags | grep -oE "[0-9]+\.[0-9][0-9]+\.[0-9]+$" | sort --version-sort | tail -n 1)
+                COMPOSE_VERSION=$(git ls-remote https://github.com/docker/compose | grep refs/tags | grep -oE "[0-9]+\.[0-9][0-9]+\.[0-9]+$" | sort --version-sort | tail -n 1)
                 if curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose; then
                     sudo chmod +x /usr/local/bin/docker-compose
                     sudo sh -c "curl -L https://raw.githubusercontent.com/docker/compose/${COMPOSE_VERSION}/contrib/completion/bash/docker-compose > /etc/bash_completion.d/docker-compose"
@@ -524,7 +524,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
                 ;;
             "mongodb")
                 log_info "Installation de MongoDB"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 if gum spin --spinner dot --title "Installation de MongoDB..." -- bash -c "wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add - && echo 'deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list && sudo apt-get update && sudo apt-get install -y mongodb-org" 2>"$temp_log"; then
                     log_debug "MongoDB installé avec succès"
                 else
@@ -571,7 +571,7 @@ if [ -n "$SELECTED_SECURITY_TOOLS" ]; then
                 ;;
             "depscan")
                 log_info "Installation de depscan"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 if gum spin --spinner dot --title "Installation de depscan..." -- pip3 install appthreat-depscan 2>"$temp_log"; then
                     log_debug "depscan installé avec succès"
                 else
@@ -617,7 +617,7 @@ if [ -n "$SELECTED_CLOUD_TOOLS" ]; then
                 ;;
             "AWS CLI")
                 log_info "Installation d'AWS CLI"
-                local temp_log=$(mktemp)
+                temp_log=$(mktemp)
                 log_debug "Téléchargement d'AWS CLI..."
                 if curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" 2>"$temp_log"; then
                     log_debug "Extraction d'AWS CLI..."
