@@ -378,6 +378,7 @@ if [ "$INSTALL_ZSH_CONFIG" = true ]; then
     install_with_brew "zoxide" "zoxide"
     install_with_brew "zsh-autosuggestions" "zsh-autosuggestions"
     install_with_brew "zsh-syntax-highlighting" "zsh-syntax-highlighting"
+    install_with_brew "zsh-completions" "zsh-completions"
     if [ "$INSTALL_ZSH_AUTOCOMPLETE" = true ]; then
         install_with_brew "zsh-autocomplete" "zsh-autocomplete"
     fi

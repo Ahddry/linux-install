@@ -131,3 +131,6 @@ eval "$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)"
 if command -v thefuck &> /dev/null; then
     eval $(thefuck --alias)
 fi
+
+# Path configuration
+export PATH="$HOME/.local/bin:$PATH"
