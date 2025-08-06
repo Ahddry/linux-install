@@ -111,9 +111,23 @@ plugins=(
 
 #*********
 
-# A garder à la fin : oh-my-posh
-eval "$(zoxide init zsh)"
-eval "$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)"
+# Homebrew configuration
+# eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+if type brew &>/dev/null; then
+    FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-eval $(thefuck --alias)
+    autoload -Uz compinit
+    compinit
+fi
+
+# Zoxide configuration (smart cd replacement)
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi
+
+# A garder à la fin : oh-my-posh
+
+eval "$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)"
+if command -v thefuck &> /dev/null; then
+    eval $(thefuck --alias)
+fi
