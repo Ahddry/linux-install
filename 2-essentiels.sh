@@ -118,7 +118,8 @@ install_with_apt() {
         rm -f "$temp_log"
         return 1
     fi
-}# Fonction pour les messages stylés (sans horodatage)
+}
+# Fonction pour les messages stylés (sans horodatage)
 print_styled() {
     local color="$2"
     case "$color" in
