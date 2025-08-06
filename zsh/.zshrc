@@ -153,10 +153,10 @@ if [ -f "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.
     source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 
-# Auto-complete
-if [ -f "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]; then
-    source "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
-fi
+# Auto-complete - optional, uncomment if you want to use it
+# if [ -f "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]; then
+#     source "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+# fi
 
 # A garder à la fin : oh-my-posh
 
