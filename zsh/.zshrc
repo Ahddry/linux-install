@@ -1,81 +1,74 @@
-# Configuration ZSH optimisée avec plugins
+# .zshrc file for Zsh configuration
+# PATH settings
+export PATH=$PATH:/home/adri/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/opt/homebrew/bin
 
-# Path configuration
-export PATH="$HOME/.local/bin:$PATH"
+#*********
+# Bashrc parameters
 
-# Homebrew configuration
-if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [ -d "$HOME/.linuxbrew" ]; then
-    eval "$($HOME/.linuxbrew/bin/brew shellenv)"
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+	# We have color support; assume it's compliant with Ecma-48
+	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+	# a case would tend to support setf rather than setaf.)
+	color_prompt=yes
+    else
+	color_prompt=
+    fi
 fi
 
-# Zoxide configuration (smart cd replacement)
-if command -v zoxide &> /dev/null; then
-    eval "$(zoxide init zsh)"
-    alias cd="z"
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
 fi
 
-# ZSH plugins configuration
-# Auto-suggestions
-if [ -f "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
-    source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
-fi
+# colored GCC warnings and errors
+#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
-# Syntax highlighting
-if [ -f "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
-    source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-fi
+# some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
 
-# Auto-complete
-if [ -f "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]; then
-    source "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
-fi
-
-# Aliases utiles
-alias ll="ls -la"
-alias la="ls -la"
-alias l="ls -l"
-alias ..="cd .."
-alias ...="cd ../.."
-alias grep="grep --color=auto"
-alias fgrep="fgrep --color=auto"
-alias egrep="egrep --color=auto"
-
-# Git aliases
-alias gs="git status"
-alias ga="git add"
-alias gc="git commit"
-alias gp="git push"
-alias gl="git pull"
-alias gd="git diff"
-alias gb="git branch"
-alias gco="git checkout"
-
-# Development aliases
-alias python="python3"
-alias pip="pip3"
-
-# Historique
-HISTSIZE=10000
-SAVEHIST=10000
-HISTFILE=~/.zsh_history
-setopt SHARE_HISTORY
-setopt HIST_VERIFY
-setopt HIST_IGNORE_ALL_DUPS
-setopt HIST_IGNORE_SPACE
-
-# Options ZSH
-setopt AUTO_CD
-setopt CORRECT
-setopt COMPLETE_IN_WORD
-setopt ALWAYS_TO_END
+#*********
 
 # Set up the prompt
 
 autoload -Uz promptinit
 promptinit
-prompt adam1
+prompt adam1 # Thème par défaut de Zsh vanilla si pas de thème oh-my-zsh
 
 setopt histignorealldups sharehistory
 
@@ -116,14 +109,11 @@ plugins=(
     zsh-completions
 )
 
-# Case insensitive completion
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-zstyle ':completion:*' list-colors ''
-zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+#*********
 
+# A garder à la fin : oh-my-posh
+eval "$(zoxide init zsh)"
+eval "$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)"
 
-
-# Oh My Posh configuration
-if command -v oh-my-posh &> /dev/null; then
-    eval "$(oh-my-posh --init --shell zsh --config ~/.montheme.omp.json)"
-fi
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+eval $(thefuck --alias)

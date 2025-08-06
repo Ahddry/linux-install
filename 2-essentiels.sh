@@ -163,6 +163,7 @@ BREW_PATH=""
 
 # Variables pour stocker les sélections utilisateur
 INSTALL_ZSH_CONFIG=false
+INSTALL_ZSH-AUTOCOMPLETE=false
 SELECTED_DEV_TOOLS=""
 INSTALL_N=false
 SELECTED_SECURITY_TOOLS=""
@@ -193,7 +194,7 @@ log_debug "Homebrew détecté à $BREW_PATH"
 # Configuration initiale et questions préliminaires
 #****************
 
-print_styled "=== Configuration des outils essentiels ===" "blue"
+print_styled "Configuration des outils essentiels " "blue"
 echo
 
 # Question 1 : Interface graphique
@@ -217,7 +218,7 @@ echo
 # Phase 1 : Collecte des choix utilisateur
 #****************
 
-print_styled "=== PHASE 1 : Sélection des outils à installer ===" "blue"
+print_styled "PHASE 1 : Sélection des outils à installer" "blue"
 echo
 
 #****************
@@ -229,6 +230,9 @@ print_styled "1. Configuration ZSH et plugins" "blue"
 if gum confirm "Souhaitez-vous importer la configuration ZSH avec les plugins recommandés ?"; then
     INSTALL_ZSH_CONFIG=true
     print_styled "✓ Configuration ZSH sélectionnée" "green"
+    if gum confirm "Souhaitez-vous également installer zsh-autocomplete ?"; then
+        INSTALL_ZSH-AUTOCOMPLETE=true
+    fi
 else
     print_styled "✗ Configuration ZSH ignorée" "yellow"
 fi
@@ -358,7 +362,7 @@ echo
 # Phase 2 : Installation des outils sélectionnés
 #****************
 
-print_styled "=== PHASE 2 : Installation des outils sélectionnés ===" "blue"
+print_styled "PHASE 2 : Installation des outils sélectionnés" "blue"
 print_styled "Les installations vont maintenant commencer. Cela peut prendre du temps..." "yellow"
 echo
 
@@ -373,7 +377,9 @@ if [ "$INSTALL_ZSH_CONFIG" = true ]; then
     install_with_brew "zoxide" "zoxide"
     install_with_brew "zsh-autosuggestions" "zsh-autosuggestions"
     install_with_brew "zsh-syntax-highlighting" "zsh-syntax-highlighting"
-    install_with_brew "zsh-autocomplete" "zsh-autocomplete"
+    if [ "$INSTALL_ZSH-AUTOCOMPLETE" = true ]; then
+        install_with_brew "zsh-autocomplete" "zsh-autocomplete"
+    fi
 
     # Sauvegarde et remplacement du .zshrc
     if [ -f "$HOME/.zshrc" ]; then
@@ -496,7 +502,20 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
                 rm -f "$temp_log"
                 ;;
             "docker-compose")
-                install_with_brew "docker-compose" "docker-compose"
+                log_info "Installation de Docker Compose"
+                local temp_log=$(mktemp)
+                log_debug "Téléchargement de Docker Compose..."
+                local COMPOSE_VERSION=$(git ls-remote https://github.com/docker/compose | grep refs/tags | grep -oE "[0-9]+\.[0-9][0-9]+\.[0-9]+$" | sort --version-sort | tail -n 1)
+                if curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose; then
+                    sudo chmod +x /usr/local/bin/docker-compose
+                    sudo sh -c "curl -L https://raw.githubusercontent.com/docker/compose/${COMPOSE_VERSION}/contrib/completion/bash/docker-compose > /etc/bash_completion.d/docker-compose"
+                else
+                    log_error "Échec de l'installation de Docker Compose"
+                    if [ -s "$temp_log" ]; then
+                        log_error "Détails de l'erreur : $(cat "$temp_log")"
+                    fi
+                fi
+                rm -f "$temp_log"
                 ;;
             "Kubernetes")
                 install_with_brew "kubectl" "kubectl"
@@ -749,7 +768,7 @@ fi
 # Finalisation
 #****************
 
-print_styled "=== Installation terminée ===" "green"
+print_styled "Installation terminée" "green"
 print_styled "Tous les outils sélectionnés ont été installés !" "green"
 print_styled "Redémarrez votre terminal ou exécutez 'source ~/.zshrc' pour appliquer tous les changements." "blue"
 
