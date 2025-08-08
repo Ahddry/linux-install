@@ -389,11 +389,11 @@ if [ "$INSTALL_ZSH_CONFIG" = true ]; then
         log_debug "Ancienne configuration sauvegardée"
     fi
 
-    if [ -f "./zsh/.zshrc" ]; then
-        cp "./zsh/.zshrc" "$HOME/.zshrc"
+    if [ -f "2-essentiels/.zshrc" ]; then
+        cp "2-essentiels/.zshrc" "$HOME/.zshrc"
         log_info "Configuration ZSH importée avec succès"
     else
-        log_error "Fichier de configuration ./zsh/.zshrc introuvable"
+        log_error "Fichier de configuration 2-essentiels/.zshrc introuvable"
     fi
 
     print_styled "✓ Configuration ZSH terminée" "green"

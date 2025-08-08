@@ -1,6 +1,6 @@
 # Scripts d'installation d'outils, de logiciels et de configuration d'environnement Linux
 
-Il s'agit d'une série de scripts Bash conçus pour automatiser l'installation et la configuration d'outils et de logiciels essentiels sur les systèmes Linux afin de reproduire ma configuration habituelle.
+Dépôt contenant une série de scripts Bash conçus pour automatiser l'installation et la configuration d'outils et de logiciels essentiels sur les systèmes Linux afin de reproduire ma configuration habituelle.
 
 Les scripts incluent des installations pour des outils de développement, des applications de productivité, des utilitaires système et bien plus encore. Ils sont conçus pour être exécutés sur des distributions basées sur Debian et Red Hat, et utilisent des gestionnaires de paquets tels que **APT** et **Homebrew**.
 
@@ -88,5 +88,5 @@ Certaines installations peuvent nécessiter les droits **sudo**.
 Pour exécuter le script, utilisez la commande suivante :
 
 ```bash
-sudo bash 2-essentiels.sh
+bash 2-essentiels.sh
 ```

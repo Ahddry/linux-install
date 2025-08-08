@@ -72,8 +72,8 @@ fi
 
 # Copie du thème personnalisé pour Oh My Posh
 print_colored "Copie du thème personnalisé pour Oh My Posh..." "info"
-if [ -f "./zsh/.montheme.omp.json" ]; then
-    cp ./zsh/.montheme.omp.json ~/.montheme.omp.json
+if [ -f "./1-prerequis/.montheme.omp.json" ]; then
+    cp ./1-prerequis/.montheme.omp.json ~/.montheme.omp.json
     if [ $? -ne 0 ]; then
         print_colored "Échec de la copie du thème personnalisé." "danger"
         exit 1
@@ -81,7 +81,7 @@ if [ -f "./zsh/.montheme.omp.json" ]; then
         print_colored "Thème personnalisé copié avec succès." "success"
     fi
 else
-    print_colored "Fichier de thème ./zsh/.montheme.omp.json introuvable." "danger"
+    print_colored "Fichier de thème ./1-prerequis/.montheme.omp.json introuvable." "danger"
     print_colored "Vérifiez que vous exécutez le script depuis le bon répertoire." "info"
     exit 1
 fi
