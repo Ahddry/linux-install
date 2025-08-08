@@ -29,14 +29,14 @@ print_colored() {
     printf "${COLOR}%b${NO_COLOR}\n" "$1"
 }
 
-print_colored "=== Installation des prérequis Linux ===" "info"
+print_colored "Installation des prérequis Linux" "info"
 print_colored "Ce script va installer tous les prérequis nécessaires en deux étapes :" ""
 print_colored "1. Installation des paquets système (avec sudo)" "info"
 print_colored "2. Configuration utilisateur (sans sudo)" "info"
 echo
 
 # Étape 1 : Installation des paquets système
-print_colored "=== ÉTAPE 1: Installation des paquets système ===" "info"
+print_colored "ÉTAPE 1: Installation des paquets système" "info"
 print_colored "Exécution de 1-prerequis/system.sh avec sudo..." "info"
 
 sudo ./1-prerequis/system.sh
@@ -46,7 +46,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo
-print_colored "=== ÉTAPE 2: Configuration utilisateur ===" "info"
+print_colored "ÉTAPE 2: Configuration utilisateur" "info"
 print_colored "Exécution de 1-prerequis/user.sh (sans sudo)..." "info"
 
 # Étape 2 : Configuration utilisateur
@@ -57,6 +57,6 @@ if [ $? -ne 0 ]; then
 fi
 
 echo
-print_colored "=== INSTALLATION TERMINÉE ===" "success"
+print_colored "INSTALLATION TERMINÉE" "success"
 print_colored "Tous les prérequis ont été installés avec succès !" "success"
 print_colored "Redémarrez votre terminal ou exécutez 'source ~/.zshrc' pour appliquer les changements." "info"
