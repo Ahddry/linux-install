@@ -348,7 +348,7 @@ fi
 print_styled "7. Scripts utilitaires" "blue"
 
 # TODO: Ajouter d'autres scripts utilitaires selon les besoins futurs
-SCRIPT_TOOLS=("add_dir_to_path")
+SCRIPT_TOOLS=("add_dir_to_path" "semgrep-custom")
 SELECTED_SCRIPT_TOOLS=$(gum choose --no-limit --header "Sélectionnez les scripts utilitaires à installer :" "${SCRIPT_TOOLS[@]}")
 
 if [ -n "$SELECTED_SCRIPT_TOOLS" ]; then
@@ -410,12 +410,12 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
     # Installation de NodeJS en premier si sélectionné
     if echo "$SELECTED_DEV_TOOLS" | grep -q "NodeJS"; then
         log_info "Installation de NodeJS"
-        if gum spin --spinner dot --title "Installation de NodeJS..." -- bash -c "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs" 2>/dev/null; then
+        if bash -c "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs" 2>/dev/null; then
             log_debug "NodeJS installé avec succès"
 
             if [ "$INSTALL_N" = true ]; then
                 log_info "Installation de n (gestionnaire de versions Node.js)"
-                if gum spin --spinner dot --title "Installation de n..." -- sudo npm install -g n 2>/dev/null; then
+                if sudo npm install -g n 2>/dev/null; then
                     log_debug "n installé avec succès"
                 else
                     log_error "Échec de l'installation de n"
@@ -438,7 +438,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
             "dotnet")
                 log_info "Installation de .NET"
                 temp_log=$(mktemp)
-                if gum spin --spinner dot --title "Installation de .NET..." -- bash -c "wget https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0" 2>"$temp_log"; then
+                if bash -c "wget https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0" 2>"$temp_log"; then
                     log_debug ".NET installé avec succès"
                     rm -f packages-microsoft-prod.deb
                 else
@@ -461,7 +461,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
             "pipx")
                 log_info "Installation de pipx"
                 temp_log=$(mktemp)
-                if gum spin --spinner dot --title "Installation de pipx..." -- pip3 install pipx 2>"$temp_log"; then
+                if pip3 install pipx 2>"$temp_log"; then
                     log_debug "pipx installé avec succès"
                     # Ajout au PATH
                     if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.zshrc" 2>/dev/null; then
@@ -525,7 +525,7 @@ if [ -n "$SELECTED_DEV_TOOLS" ]; then
             "mongodb")
                 log_info "Installation de MongoDB"
                 temp_log=$(mktemp)
-                if gum spin --spinner dot --title "Installation de MongoDB..." -- bash -c "wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add - && echo 'deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list && sudo apt-get update && sudo apt-get install -y mongodb-org" 2>"$temp_log"; then
+                if bash -c "wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add - && echo 'deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list && sudo apt-get update && sudo apt-get install -y mongodb-org" 2>"$temp_log"; then
                     log_debug "MongoDB installé avec succès"
                 else
                     log_error "Échec de l'installation de MongoDB"
@@ -572,7 +572,7 @@ if [ -n "$SELECTED_SECURITY_TOOLS" ]; then
             "depscan")
                 log_info "Installation de depscan"
                 temp_log=$(mktemp)
-                if gum spin --spinner dot --title "Installation de depscan..." -- pip3 install appthreat-depscan 2>"$temp_log"; then
+                if pip3 install appthreat-depscan 2>"$temp_log"; then
                     log_debug "depscan installé avec succès"
                 else
                     log_error "Échec de l'installation de depscan"
@@ -609,7 +609,7 @@ if [ -n "$SELECTED_CLOUD_TOOLS" ]; then
         case $tool in
             "Azure CLI")
                 log_info "Installation d'Azure CLI"
-                if gum spin --spinner dot --title "Installation d'Azure CLI..." -- bash -c "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash" 2>/dev/null; then
+                if bash -c "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash" 2>/dev/null; then
                     log_debug "Azure CLI installé avec succès"
                 else
                     log_error "Échec de l'installation d'Azure CLI"
@@ -697,7 +697,7 @@ if [ "$HAS_GUI" = true ] && [ -n "$SELECTED_GUI_APPS" ]; then
         case $app in
             "VSCode")
                 log_info "Installation de VSCode"
-                if gum spin --spinner dot --title "Installation de VSCode..." -- $BREW_PATH install --cask visual-studio-code 2>/dev/null; then
+                if bash -c "$BREW_PATH install --cask visual-studio-code" 2>/dev/null; then
                     log_debug "VSCode installé avec succès"
                 else
                     log_error "Échec de l'installation de VSCode"
@@ -705,7 +705,7 @@ if [ "$HAS_GUI" = true ] && [ -n "$SELECTED_GUI_APPS" ]; then
                 ;;
             "Spotify")
                 log_info "Installation de Spotify"
-                if gum spin --spinner dot --title "Installation de Spotify..." -- $BREW_PATH install --cask spotify 2>/dev/null; then
+                if bash -c "$BREW_PATH install --cask spotify" 2>/dev/null; then
                     log_debug "Spotify installé avec succès"
                 else
                     log_error "Échec de l'installation de Spotify"
@@ -713,7 +713,7 @@ if [ "$HAS_GUI" = true ] && [ -n "$SELECTED_GUI_APPS" ]; then
                 ;;
             "Firefox")
                 log_info "Installation de Firefox"
-                if gum spin --spinner dot --title "Installation de Firefox..." -- $BREW_PATH install --cask firefox 2>/dev/null; then
+                if bash -c "$BREW_PATH install --cask firefox" 2>/dev/null; then
                     log_debug "Firefox installé avec succès"
                 else
                     log_error "Échec de l'installation de Firefox"
@@ -721,7 +721,7 @@ if [ "$HAS_GUI" = true ] && [ -n "$SELECTED_GUI_APPS" ]; then
                 ;;
             "VLC")
                 log_info "Installation de VLC"
-                if gum spin --spinner dot --title "Installation de VLC..." -- $BREW_PATH install --cask vlc 2>/dev/null; then
+                if bash -c "$BREW_PATH install --cask vlc" 2>/dev/null; then
                     log_debug "VLC installé avec succès"
                 else
                     log_error "Échec de l'installation de VLC"
